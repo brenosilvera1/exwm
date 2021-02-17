@@ -1,0 +1,1033 @@
+#+title: Emacs Configuration
+#+author: b2r1s8@gen2
+#+date: 2021-02-08
+#+startup: hidestars odd overview
+
+    I've been using emacs for a while now and dicided that it is time to convert my configs to org mode.
+
+    This configuration uses the [[https://github.com/jwiegley/use-package][use-package]] package from John Wiegley, which is
+a fantastic way to manage package configurations.
+
+* Personal Information
+
+#+begin_src emacs-lisp
+
+(setq user-full-name "b2r1s8"
+      user-mail-address "")
+
+#+end_src
+
+* Sane defaults
+
+    The default emacs config is ugly and not efficient.
+
+** Startup Performance
+
+    Make startup faster by reducing the frequency of garbage collection and then use a hook to measure Emacs startup time.
+
+#+begin_src emacs-lisp
+
+  ;; The default is 800 kilobytes.  Measured in bytes.
+  (setq gc-cons-threshold (* 50 1000 1000))
+
+  ;; Profile emacs startup
+  (add-hook 'emacs-startup-hook
+            (lambda ()
+              (message "*** Emacs loaded in %s with %d garbage collections."
+                       (format "%.2f seconds"
+                               (float-time
+                                (time-subtract after-init-time before-init-time)))
+                       gcs-done)))
+
+#+end_src
+   
+** Customizing emacs
+
+#+begin_src emacs-lisp
+
+;; Fist things first
+(setq inhibit-startup-message t)
+(tool-bar-mode -1)    ;;  Remove tool bar C-x u undo | C-w cut | M-w copy | C-y paste
+(menu-bar-mode -1) ;; Remove menus
+(scroll-bar-mode -1) ;; Remove scroll bar
+(global-hl-line-mode t) ;; Show current line
+(global-prettify-symbols-mode t) ;; Prettify symbols mode
+(set-face-attribute 'default nil :height 105) ;; Font size
+(column-number-mode 1) ;; Colummns numeration
+(show-paren-mode 1) ;; Show parent parentesis
+(setq visible-bell t) ;; Visible bell
+;;(setq-default header-line-format mode-line-format)
+(setq-default mode-line-format nil)
+(setq-default header-line-format nil)
+
+;; Tabbar
+(require 'tabbar)
+(tab-bar-mode 1) ;; Additing tabs
+
+;; Show time and date on the mode line
+(setq display-time-day-and-date t)
+(setq display-time-format "%a %b %F %R")
+(display-time-mode 1)
+
+;; Frame tansparency
+(set-frame-parameter (selected-frame) 'alpha '(75 . 75))
+(add-to-list 'default-frame-alist '(alpha . (75 . 75)))
+(set-frame-parameter (selected-frame) 'fullscreen 'maximized)
+(add-to-list 'default-frame-alist '(fullscreen . maximized))
+
+;; Line numbers
+(global-linum-mode t)
+(setq linum-format "%2d \u2502")
+(dolist (mode '(org-mode-hook
+				term-mode-hook
+				shell-mode-hook
+				treemacs-mode-hook
+				eshell-mode-hook))
+  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+;; Border
+(setq frame-resize-pixelwise t)
+(set-frame-parameter nil 'fullscreen 'fullboth)
+
+;; Keep all backup and auto-save files in one directory
+(setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
+(setq auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-save-list/" t)))
+
+;; UTF-8 please
+(setq locale-coding-system 'utf-8) ; pretty
+(set-terminal-coding-system 'utf-8) ; pretty
+(set-keyboard-coding-system 'utf-8) ; pretty
+(set-selection-coding-system 'utf-8) ; please
+(prefer-coding-system 'utf-8) ; with sugar on top
+
+;; Identation:
+(setq-default tab-width 2)
+(setq-default standard-indent 2)
+(setq c-basic-offset tab-width)
+(setq-default electric-indent-inhibit t)
+(setq-default indent-tabs-mode nil)
+(setq backward-delete-char-untabify-method 'nil)
+
+;; Enable bracket pair-matching
+(setq electric-pair-pairs '(
+							(?\{ . ?\})
+							(?\( . ?\))
+							(?\[ . ?\])
+							(?\" . ?\")
+							))
+(electric-pair-mode t)
+
+;; Terminal-here
+(require 'terminal-here)
+(setq terminal-here-linux-terminal-command 'alacritty)
+
+#+end_src
+
+** Changing how focus work
+
+    This fuction change the focus to the new window
+
+#+begin_src emacs-lisp
+
+;;; Mude o foco p/ novas janelas
+(defun split-and-follow-horizontally ()
+  (interactive)
+  (split-window-below)
+  (balance-windows)
+  (other-window 1))
+
+(defun split-and-follow-vertically ()
+  (interactive)
+  (split-window-right)
+  (balance-windows)
+  (other-window 1))
+
+#+end_src
+
+** Alias
+
+    Some alias that make my life easier
+
+#+begin_src emacs-lisp
+
+;; Alias
+(defalias 'yes-or-no-p 'y-or-n-p)
+(defalias 'open 'find-file-other-window)
+(defalias 'clean 'eshell/clear-scrollback)
+(defalias 'list-buffers 'ibuffer)
+
+#+end_src
+
+** Key binds
+
+    Some key binds to make my life easier
+
+#+begin_src emacs-lisp
+
+(global-unset-key (kbd "C-z")) ;; Unbind C-z
+(global-unset-key (kbd "C-Z")) ;; Unbind C-Z
+(global-set-key (kbd "M-<up>") 'shrink-window)
+(global-set-key (kbd "M-<down>") 'enlarge-window)
+(global-set-key (kbd "M-<right>") 'shrink-window-horizontally)
+(global-set-key (kbd "M-<left>") 'enlarge-window-horizontally)
+(global-set-key (kbd "s-<up>") 'windmove-up)
+(global-set-key (kbd "s-<down>") 'windmove-down)
+(global-set-key (kbd "s-<right>") 'windmove-right)
+(global-set-key (kbd "s-<left>") 'windmove-left)
+(global-set-key (kbd "C-<tab>") 'other-window)
+(global-set-key (kbd "C-x 3") 'split-and-follow-vertically)	
+(global-set-key (kbd "C-x 2") 'split-and-follow-horizontally)
+(global-set-key (kbd "C-c l") 'org-store-link)
+(global-set-key (kbd "C-c a") 'org-agenda)
+(global-set-key (kbd "C-c c") 'org-capture)
+(global-set-key (kbd "C-<f5>") #'terminal-here-launch)
+(global-set-key (kbd "C-<f6>") #'terminal-here-project-launch)
+
+#+end_src
+
+** Functions
+
+    Some Functions that I use.
+
+*** Dashboard
+
+#+begin_src emacs-lisp
+
+;; Open new tab on the dashboard
+(defun new-tab ()
+  (interactive)
+  (tab-new-to)
+  (switch-to-buffer (get-buffer-create "*dashboard*")))
+(global-set-key (kbd "s-x") 'new-tab)
+(global-set-key (kbd "s-X") 'tab-close)
+
+#+end_src
+
+*** Midnight + cleanbuffer-list
+
+#+begin_src emacs-lisp
+
+;; Configuring desktop
+;;(require 'desktop)
+;;  (desktop-save-mode 1)
+;;  (defun my-desktop-save ()
+;;    (interactive)
+;;    ;; Don't call desktop-save-in-desktop-dir, as it prints a message.
+;;    (if (eq (desktop-owner) (emacs-pid))
+;;        (desktop-save desktop-dirname)))
+;;  (add-hook 'auto-save-hook 'my-desktop-save)
+;;
+;;(setq clean-buffer-list-delay-general 1)
+;;
+;;;; Configuring midnight
+;;(require 'midnight)
+;;(midnight-delay-set 'midnight-delay "6:30am")
+
+#+end_src
+
+* Packages
+
+    Some packages that I use.
+
+** Dashboard
+
+A beatiful and usefull dashboard.
+
+#+begin_src emacs-lisp
+
+(use-package dashboard
+  :ensure t
+  :defer nil
+  :preface
+  (defun init-edit ()
+	"Edit initialization file."
+	(interactive)
+	(find-file "~/.emacs.d/init.el"))
+  (defun conf-edit ()
+	"Edit configuration file."
+	(interactive)
+	(find-file "~/.emacs.d/config.org"))
+  (defun create-scratch-buffer ()
+	"Create a scratch buffer."
+	(interactive)
+	(switch-to-buffer (get-buffer-create "*scratch*"))
+	(lisp-interaction-mode))
+  :config
+  (dashboard-setup-startup-hook)
+  (setq dashboard-items '((recents . 25)))
+  (setq dashboard-banner-logo-title "Welcome to Emacs!")
+  (setq dashboard-startup-banner "~/.emacs.d/img/emacs.png")
+  (setq dashboard-center-content t)
+  (setq dashboard-show-shortcuts nil)
+  (setq dashboard-set-init-info t)
+  (setq dashboard-init-info (format "%d packages loaded in %s"
+									(length package-activated-list) (emacs-init-time)))
+  (setq dashboard-set-footer nil)
+  (setq dashboard-set-navigator t)
+  (setq dashboard-navigator-buttons
+		`(((,nil
+			"Open init.el file."
+			"Open Emacs initialization file for easy editing."
+			(lambda (&rest _) (init-edit))
+			'default)
+		   (nil
+			"Open config.org file."
+			"Open Emacs configuration file for easy editing."
+			(lambda (&rest _) (conf-edit))
+			'default)
+		   (nil
+			"Open scratch buffer."
+			"Switch to the scratch buffer."
+			(lambda (&rest _) (create-scratch-buffer))
+			'default)))))
+
+#+end_src
+
+** EXWM
+
+#+begin_src emacs-lisp
+
+(defun exwm/run-in-background (command)
+	(let ((command-parts (split-string command "[ ]+")))
+	  (apply #'call-process `(,(car command-parts) nil 0 nil ,@(cdr command-parts)))))
+
+(defun exwm/exwm-update-class ()
+	(exwm-workspace-rename-buffer exwm-class-name))
+
+(defun exwm/exwm-update-title ()
+  (pcase exwm-class-name
+    ("Firefox" (exwm-workspace-rename-buffer (format "Firefox: %s" exwm-title)))))
+
+(defun exwm/configure-window-by-class ()
+  (interactive)
+  (pcase exwm-class-name
+    ("TelegramDesktop" (exwm-workspace-move-window 9))
+    ("mpv" (exwm-floating-toggle-floating)
+     (exwm-layout-toggle-mode-line))))
+
+(use-package exwm
+	:config
+	;; Set the default number of workspaces
+	(setq exwm-workspace-number 5)
+
+	;; When window "class" updates, use it to set the buffer name
+	(add-hook 'exwm-update-class-hook #'exwm/exwm-update-class)
+
+  ;; When window title updates, use it to set the buffer name
+  (add-hook 'exwm-update-title-hook #'exwm/exwm-update-title)
+
+  ;; Configure windows as they're created
+  (add-hook 'exwm-init-hook #'exwm/configure-window-by-class)
+
+  ;; Automatically move EXWM buffer to current worspace when selected
+  (setq exwm-layout-show-all-buffers t)
+
+  ;; Display all EXWM buffers in every workspace buffer list
+  (setq exwm-workspace-show-all-buffers t)
+
+  ;; Detach the minibuffer
+  (setq exwm-workspace-minibuffer-position 'top)
+
+	;; Set the screen resolution (update this to be the correct resolution for your screen!)
+	(require 'exwm-randr)
+	(exwm-randr-enable)
+	(start-process-shell-command "xrandr" nil "xrandr --output HDMI-A-3 --primary --mode 1920x1080 --pos 0x0 --rotate normal --output DVI-D-0 --mode 1920x1080 --pos 1920x0 --rotate normal")
+	(setq exwm-randr-workspace-monitor-plist '(0 "DVI-D-0" 9 "DVI-D-0"))
+
+	;; Initialazing apps
+
+	(exwm/run-in-background "nitrogen --restore")
+	(exwm/run-in-background "nm-applet")
+	(exwm/run-in-background "radeon-profile")
+	(exwm/run-in-background "pulseaudio --kill")
+	(exwm/run-in-background "pulseaudio --start")
+	(exwm/run-in-background "ipfs daemon")
+	(exwm/run-in-background "xsetoff")
+
+	;; Load the system tray before exwm-init
+	(require 'exwm-systemtray)
+	(setq exwm-systemtray-height 20)
+	(exwm-systemtray-enable)
+
+	;; These keys should always pass through to Emacs
+	(setq exwm-input-prefix-keys
+	      '(?\C-x
+		      ?\C-u
+		      ?\C-h
+		      ?\M-x
+		      ?\M-`
+		      ?\M-&
+		      ?\M-:
+		      ?\C-\M-j  ;; Buffer list
+		      ?\C-\ ))  ;; File-tree
+
+	;; Ctrl+Q will enable the next key to be sent directly
+	(define-key exwm-mode-map [?\C-ç] 'exwm-input-send-next-key)
+
+	;; Set up global key bindings.  These always work, no matter the input state!
+	;; Keep in mind that changing this list after EXWM initializes has no effect.
+	(setq exwm-input-global-keys
+		    `(
+			    ;; Reset to line-mode (C-c C-k switches to char-mode via exwm-input-release-keyboard)
+			    ([?\s-r] . exwm-reset)
+
+			    ;; Dmenu-like app launcher
+			    ([s-menu] . counsel-linux-app)
+
+			    ;; Move between windows
+			    ([s-left] . windmove-left)
+			    ([s-right] . windmove-right)
+			    ([s-up] . windmove-up)
+			    ([s-down] . windmove-down)
+
+			    ;; Launch applications via shell command
+			    ([?\s-&] . (lambda (command)
+						           (interactive (list (read-shell-command "$ ")))
+						           (start-process-shell-command command nil command)))
+
+			    ;; Switch workspace
+			    ([?\s-w] . exwm-workspace-switch)
+			    ([?\s-`] . (lambda () (interactive) (exwm-workspace-switch-create 0)))
+
+			    ;; 's-N': Switch to certain workspace with Super (Win) plus a number key (0 - 9)
+			    ,@(mapcar (lambda (i)
+						          `(,(kbd (format "s-%d" i)) .
+						            (lambda ()
+							            (interactive)
+							            (exwm-workspace-switch-create ,i))))
+					          (number-sequence 0 9))))
+	(exwm-enable))
+
+#+end_src
+
+** PDFTools
+
+    Change viewdoc to pdfview with pdftools
+
+#+begin_src emacs-lisp
+
+(use-package pdf-tools
+  :defer t
+  :commands (pdf-view-mode pdf-tools-install)
+  :mode ("\\.[pP][dD][fF]\\'" . pdf-view-mode)
+  :load-path "site-lisp/pdf-tools/lisp"
+  :magic ("%PDF" . pdf-view-mode)
+  :config
+  (pdf-tools-install)
+  (define-pdf-cache-function pagelabels)
+  :hook ((pdf-view-mode-hook . (lambda () (display-line-numbers-mode -1)))
+		     (pdf-view-mode-hook . pdf-tools-enable-minor-modes)))
+(use-package pdf-view-restore
+  :after pdf-tools
+  :config
+  (add-hook 'pdf-view-mode-hook 'pdf-view-restore-mode))
+
+;;(use-package org-pdftools
+;;  :hook (org-load-hook . org-pdftools-setup-link))
+
+(add-hook 'pdf-view-mode-hook (lambda() (linum-mode -1)))
+
+#+end_src
+
+** ORG Mode
+
+    Org mode configurantion.
+
+#+begin_src emacs-lisp
+
+;; Org init
+(use-package org
+  :config
+  (add-hook 'org-mode-hook
+			      '(lambda ()
+			         (visual-line-mode 1)))
+  (setq org-display-inline-images t)
+  (setq org-redisplay-inline-images t)
+  (setq org-startup-with-inline-images "inlineimages")
+  (setq org-directory "~/.emacs.d/org")
+  (setq org-agenda-files (list "inbox.org"))
+  (global-set-key (kbd "C-<f1>") (lambda()
+								                   (interactive)
+								                   (outline-show-all))))
+(use-package org-bullets
+  :config
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+
+(use-package htmlize
+  :ensure t)
+
+;; src exec
+(org-babel-do-load-languages 'org-babel-load-languages
+							               '(
+							                 (shell . t)
+							                 )
+                             )
+
+(setq org-src-fontify-natively t
+      org-src-window-setup 'current-window
+      org-src-strip-leading-and-trailing-blank-lines t
+      org-src-preserve-indentation t
+      org-src-tab-acts-natively t)
+
+(require 'org-tempo)
+
+;; And that'll allow you to type "<sh", "<el", "<py", "<conf" followed by tab to create src blocks for those languages, and you can add as many others as you want.
+(add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+(add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+(add-to-list 'org-structure-template-alist '("py" . "src python"))
+(add-to-list 'org-structure-template-alist '("conf" . "src conf"))
+
+;; Org default head
+;;(add-to-list 'org-structure-template-alist
+;;             '("p" "#+title:\n#+author: b2r1s8@gen2\n#+date:\n#+startup: hidestars odd overview\n\n? "))
+
+#+end_src
+
+** Doom-modeline
+
+   Default Doom-modeline
+
+#+begin_src emacs-lisp
+(use-package doom-modeline
+  :ensure t
+  :init (doom-modeline-mode 1))
+(setq doom-modeline-height 5)
+
+;; Hide mode-line when is not usefull
+(setq doom-hide-modeline-mode t)
+
+;; The limit of the window width.
+;; If `window-width' is smaller than the limit, some information won't be displayed.
+(setq doom-modeline-window-width-limit fill-column)
+;; Whether display the icon for `major-mode'. It respects `doom-modeline-icon'.
+(setq doom-modeline-major-mode-icon t)
+
+;; Whether display the colorful icon for `major-mode'.
+;; It respects `all-the-icons-color-icons'.
+(setq doom-modeline-major-mode-color-icon t)
+
+;; Whether display the icon for the buffer state. It respects `doom-modeline-icon'.
+(setq doom-modeline-buffer-state-icon t)
+
+;; Whether display the modification icon for the buffer.
+;; It respects `doom-modeline-icon' and `doom-modeline-buffer-state-icon'.
+(setq doom-modeline-buffer-modification-icon t)
+
+;; Whether display the buffer encoding.
+(setq doom-modeline-buffer-encoding t)
+
+;; If non-nil, only display one number for checker information if applicable.
+(setq doom-modeline-checker-simple-format t)
+
+;; Whether display the workspace name. Non-nil to display in the mode-line.
+(setq doom-modeline-workspace-name t)
+
+#+end_src
+
+** Ace window
+
+    This packages make easy to move around windows.
+
+	- x -> delete window
+	- m -> swap windows
+	- M -> move window
+	- c -> copy window
+	- j -> select buffer
+	- n -> select the previous window
+	- u -> select buffer in the other window
+	- c -> split window fairly, either vertically or horizontally
+	- v -> split window vertically
+	- b -> split window horizontally
+	- o -> maximize current window
+	- ? -> show these command bindings
+
+#+begin_src emacs-lisp
+
+(use-package ace-window
+  :ensure t
+  :bind (("C-o" . ace-window)))
+
+#+end_src
+
+** CLISP
+ 
+    Common lisp setup
+
+#+begin_src emacs-lisp
+
+(use-package slime
+  :ensure t
+  :defer 10
+  :config
+  :init
+  (setq inferior-lisp-program "sbcl")
+  (setq slime-contribs '(slime-fancy)))
+
+#+end_src
+
+** Which-key
+
+#+begin_src emacs-lisp
+
+(use-package which-key
+  :ensure t
+  :diminish which-key-mode
+  :init
+  (which-key-mode)
+  :config
+  (setq which-key-idle-delay 0.3))
+
+#+end_src
+
+** Simplify Leader Bindings (general.el)
+
+[[https://github.com/noctuid/general.el][general.el]] is a fantastic library for defining prefixed keybindings, especially
+in conjunction with Evil modes.
+
+#+begin_src emacs-lisp
+
+(use-package general
+  :config
+  (general-evil-setup nil)
+
+  (general-create-definer dw/leader-key-def
+    :keymaps '(normal insert visual emacs)
+    :prefix "SPC"
+    :global-prefix "C-SPC")
+
+  (general-create-definer dw/ctrl-c-keys
+    :prefix "C-c"))
+
+#+end_src
+
+** Swiper
+
+#+begin_src emacs-lisp
+
+(use-package swiper
+  :ensure t
+  :bind ("s-s" . 'swiper))
+
+#+end_src
+
+** Beacon
+
+#+begin_src emacs-lisp
+
+(use-package beacon
+  :ensure t
+  :diminish beacon-mode
+  :init
+  (beacon-mode 1))
+
+#+end_src
+
+** Async
+
+#+begin_src emacs-lisp
+
+(use-package async
+  :ensure t
+  :init
+  (dired-async-mode 1))
+
+#+end_src
+
+** Page-break-lines
+
+#+begin_src emacs-lisp
+
+(use-package page-break-lines
+  :ensure t
+  :diminish (page-break-lines-mode visual-line-mode))
+
+#+end_src
+
+** Undoo-tree
+
+#+begin_src emacs-lisp
+
+(use-package undo-tree
+  :ensure t
+  :diminish undo-tree-mode)
+
+#+end_src
+
+** Saveplace
+
+#+begin_src emacs-lisp
+
+(use-package saveplace
+  :defer nil
+  :config
+  (save-place-mode))
+
+#+end_src
+
+** Eldoc
+
+#+begin_src emacs-lisp
+
+(use-package eldoc
+  :diminish eldoc-mode)
+
+#+end_src
+
+** Try
+
+#+begin_src emacs-lisp
+
+(use-package try
+  :ensure t)
+
+#+end_src
+
+** Auto-complete
+
+#+begin_src emacs-lisp
+
+(use-package auto-complete
+  :ensure t
+  :init
+  (progn
+	(ac-config-default)
+	(global-auto-complete-mode t)))
+
+#+end_src
+
+** Neotree
+
+#+begin_src emacs-lisp
+
+(use-package neotree
+  :ensure t
+  :bind (("C-\\" . 'neotree-toggle))) ;; Ativa a tree
+
+#+end_src
+
+** Color-theme-modern
+
+#+begin_src emacs-lisp
+
+(use-package color-theme-modern
+  :ensure t)
+
+#+end_src
+
+** Flycheck
+
+#+begin_src emacs-lisp
+
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode t))
+
+#+end_src
+
+** Recentf
+
+#+begin_src emacs-lisp
+
+(use-package recentf
+  :config
+  (recentf-mode t)
+  (setq recentf-max-saved-items 500))
+
+#+end_src
+
+** Expand region
+
+#+begin_src emacs-lisp
+
+(use-package expand-region
+  :ensure t
+  :bind ("C-@" . er/expand-region))
+
+#+end_src
+
+** Smoothscrolling
+
+    This makes it so ~C-n~-ing and ~C-p~-ing won't make the buffer jump
+around so much.
+
+#+begin_src emacs-lisp
+
+(use-package smooth-scrolling
+  :ensure t
+  :config
+  (smooth-scrolling-mode))
+
+#+end_src
+
+** Webmode
+
+#+begin_src emacs-lisp :tangle no
+
+(use-package web-mode
+  :ensure t)
+
+#+end_src
+
+** Emmet
+
+    According to [[http://emmet.io/][their website]], "Emmet — the essential toolkit for web-developers."
+
+#+begin_src emacs-lisp
+
+(use-package emmet-mode
+  :ensure t
+  :commands emmet-mode
+  :config
+  (add-hook 'html-mode-hook 'emmet-mode)
+  (add-hook 'css-mode-hookg 'emmet-mode))
+
+#+end_src
+
+** Scratch major mode
+
+    Convenient package to create =*scratch*= buffers that are based on the
+current buffer's major mode. This is more convienent than manually
+creating a buffer to do some scratch work or reusing the initial
+=*scratch*= buffer.
+
+#+begin_src emacs-lisp
+
+(use-package scratch
+  :ensure t
+  :commands scratch)
+
+#+end_src
+
+** Shell pop
+
+#+BEGIN_SRC emacs-lisp
+
+(use-package shell-pop
+  :ensure t
+  :bind ("M-<f12>" . shell-pop))
+
+#+END_SRC
+
+** Quickrun
+
+#+BEGIN_SRC emacs-lisp
+
+(use-package quickrun
+  :defer 10
+  :ensure t
+  :bind ("C-c r" . quickrun))
+
+#+END_SRC
+
+** terminal-here
+
+#+begin_src emacs-lisp
+
+(use-package terminal-here
+  :ensure t
+  :bind (("C-c o t" . terminal-here-launch)
+		     ("C-c o p" . terminal-here-project-launch)))
+
+#+end_src
+
+** Whitespace
+
+#+begin_src emacs-lisp
+
+(use-package whitespace)
+(require 'whitespace)
+(setq whitespace-line-column 80) ;; limit line length
+(setq whitespace-style '(face lines-tail))
+
+;; Automatically clean whitespace
+(use-package ws-butler
+  :hook ((text-mode . ws-butler-mode)
+         (prog-mode . ws-butler-mode)))
+
+#+end_src
+
+** Ivy
+
+   I currently use Ivy, Counsel, and Swiper to navigate around files, buffers, and
+projects super quickly.  Here are some workflow notes on how to best use Ivy:
+
+  - While in an Ivy minibuffer, you can search within the current results by using =S-Space=.
+  - To quickly jump to an item in the minibuffer, use =C-'= to get Avy line jump keys.
+  - To see actions for the selected minibuffer item, use =M-o= and then press the action's key.
+  - *Super useful*: Use =C-c C-o= to open =ivy-occur= to open the search results in a separate buffer.  From there you can click any item to perform the ivy action.
+
+#+begin_src emacs-lisp
+
+(use-package ivy
+  :diminish
+  :bind (("C-s" . swiper)
+         :map ivy-minibuffer-map
+         ("TAB" . ivy-alt-done)
+         ("C-f" . ivy-alt-done)
+         ("C-l" . ivy-alt-done)
+         ("C-j" . ivy-next-line)
+         ("C-k" . ivy-previous-line)
+         :map ivy-switch-buffer-map
+         ("C-k" . ivy-previous-line)
+         ("C-l" . ivy-done)
+         ("C-d" . ivy-switch-buffer-kill)
+         :map ivy-reverse-i-search-map
+         ("C-k" . ivy-previous-line)
+         ("C-d" . ivy-reverse-i-search-kill))
+  :init
+  (ivy-mode 1)
+  :config
+  (setq ivy-use-virtual-buffers t)
+  (setq ivy-wrap t)
+  (setq ivy-count-format "(%d/%d) ")
+  (setq enable-recursive-minibuffers t)
+
+  ;; Use different regex strategies per completion command
+  (push '(completion-at-point . ivy--regex-fuzzy) ivy-re-builders-alist) ;; This doesn't seem to work...
+  (push '(swiper . ivy--regex-ignore-order) ivy-re-builders-alist)
+  (push '(counsel-M-x . ivy--regex-ignore-order) ivy-re-builders-alist)
+
+  ;; Set minibuffer height for different commands
+  (setf (alist-get 'counsel-projectile-ag ivy-height-alist) 15)
+  (setf (alist-get 'counsel-projectile-rg ivy-height-alist) 15)
+  (setf (alist-get 'swiper ivy-height-alist) 15)
+  (setf (alist-get 'counsel-switch-buffer ivy-height-alist) 7))
+
+(use-package ivy-hydra
+  :defer t
+  :after hydra)
+
+(use-package ivy-rich
+  :init
+  (ivy-rich-mode 1)
+  :after counsel
+  :config
+  (setq ivy-format-function #'ivy-format-function-line)
+  (setq ivy-rich-display-transformers-list
+        (plist-put ivy-rich-display-transformers-list
+                   'ivy-switch-buffer
+                   '(:columns
+                     ((ivy-rich-candidate (:width 40))
+                      (ivy-rich-switch-buffer-indicators (:width 4 :face error :align right)); return the buffer indicators
+                      (ivy-rich-switch-buffer-major-mode (:width 12 :face warning))          ; return the major mode info
+                      (ivy-rich-switch-buffer-project (:width 15 :face success))             ; return project name using `projectile'
+                      (ivy-rich-switch-buffer-path (:width (lambda (x) (ivy-rich-switch-buffer-shorten-path x (ivy-rich-minibuffer-width 0.3))))))  ; return file path relative to project root or `default-directory' if project is nil
+                     :predicate
+                     (lambda (cand)
+                       (if-let ((buffer (get-buffer cand)))
+                           ;; Don't mess with EXWM buffers
+                           (with-current-buffer buffer
+                             (not (derived-mode-p 'exwm-mode)))))))))
+
+(use-package counsel
+  :after ivy
+  :bind (("M-x" . counsel-M-x)
+         ("C-x b" . counsel-ibuffer)
+         ("C-x C-f" . counsel-find-file)
+         ("C-M-j" . counsel-switch-buffer)
+         ("C-M-l" . counsel-imenu)
+         :map minibuffer-local-map
+         ("C-r" . 'counsel-minibuffer-history))
+  :custom
+  (counsel-linux-app-format-function #'counsel-linux-app-format-function-name-only)
+  :config
+  (setq ivy-initial-inputs-alist nil)) ;; Don't start searches with ^
+
+(use-package flx  ;; Improves sorting for fuzzy-matched results
+  :after ivy
+  :defer t
+  :init
+  (setq ivy-flx-limit 10000))
+
+(use-package wgrep)
+
+(use-package ivy-posframe
+  :disabled
+  :custom
+  (ivy-posframe-width      115)
+  (ivy-posframe-min-width  115)
+  (ivy-posframe-height     10)
+  (ivy-posframe-min-height 10)
+  :config
+  (setq ivy-posframe-display-functions-alist '((t . ivy-posframe-display-at-frame-center)))
+  (setq ivy-posframe-parameters '((parent-frame . nil)
+                                  (left-fringe . 8)
+                                  (right-fringe . 8)))
+  (ivy-posframe-mode 1))
+
+(use-package prescient
+  :after counsel
+  :config
+  (prescient-persist-mode 1))
+
+(use-package ivy-prescient
+  :after prescient
+  :config
+  (ivy-prescient-mode 1))
+
+(dw/leader-key-def
+  "r"   '(ivy-resume :which-key "ivy resume")
+  "f"   '(:ignore t :which-key "files")
+  "ff"  '(counsel-find-file :which-key "open file")
+  "C-f" 'counsel-find-file
+  "fr"  '(counsel-recentf :which-key "recent files")
+  "fR"  '(revert-buffer :which-key "revert file")
+  "fj"  '(counsel-file-jump :which-key "jump to file"))
+
+#+end_src
+   
+** Packages config
+
+    Configuration for packages
+
+#+begin_src emacs-lisp
+
+;; Dired
+(require 'dired-x)
+(setq dired-omit-files "^\\...+$")
+(add-hook 'dired-mode-hook (lambda () (dired-omit-mode 1)))
+(add-hook 'dired-mode-hook 'auto-revert-mode)
+(setq global-auto-revert-non-file-buffers t)
+(setq auto-revert-verbose nil)
+
+;; Elpher
+(advice-add 'eww-browse-url :around 'elpher:eww-browse-url)
+
+;; eww
+(defun elpher:eww-browse-url (original url &optional new-window)
+  "Handle gemini links."
+  (cond ((string-match-p "\\`\\(gemini\\|gopher\\)://" url)
+		     (require 'elpher)
+		     (elpher-go url))
+		    (t (funcall original url new-window))))
+
+;;; Eshell
+(setq eshell-prompt-regexp "^[^αλ\n]*[αλ] ")
+(setq eshell-prompt-function
+	    (lambda nil
+		    (concat
+		     (if (string= (eshell/pwd) (getenv "HOME"))
+			       (propertize "~" 'face `(:foreground "#99CCFF"))
+		       (replace-regexp-in-string
+			      (getenv "HOME")
+			      (propertize "~" 'face `(:foreground "#99CCFF"))
+			      (propertize (eshell/pwd) 'face `(:foreground "#99CCFF"))))
+		     (if (= (user-uid) 0)
+			       (propertize " α " 'face `(:foreground "#FF6666"))
+		       (propertize " λ " 'face `(:foreground "#A6E22E"))))))
+
+(setq eshell-highlight-prompt nil)
+
+(require 'emms-setup)
+(emms-all)
+(emms-default-players)
+(setq emms-source-file-default-directory "~/songs/")
+(setq emms-info-asynchronously nil)
+(setq emms-playlist-buffer-name "*Music*")
+
+;; ERC
+;;(erc :server "irc.freenode.net" :port 6667 :nick "b2r1s8")
+;;(setq erc-autojoin-channels-alist
+;;      '(("freenode.net" "#gentoo" "#gentoo-chat" "#ratpoison" "#perl" "#monero" "#emacs" "#emacs-beginners" "#emacs-offtopic" "#org-mode")))
+
+#+end_src
